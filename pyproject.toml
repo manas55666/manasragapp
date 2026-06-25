@@ -1,0 +1,16 @@
+# Ruff (lint + format) and pytest configuration.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# pycodestyle (E/W), pyflakes (F), isort (I), bugbear (B), pyupgrade (UP).
+select = ["E", "W", "F", "I", "B", "UP"]
+# B008: calling File()/Depends() in argument defaults is the idiomatic FastAPI
+# dependency-injection pattern, not a bug — so we allow it.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

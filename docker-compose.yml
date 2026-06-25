@@ -1,0 +1,20 @@
+# Local development compose file for the RAG service.
+# On the EC2 host a similar service block is combined with the full-stack app
+# behind a shared Nginx reverse proxy (see deploy/ and the README).
+services:
+  rag:
+    build: .
+    image: manas-rag-app:local
+    ports:
+      - "8000:8000"
+    environment:
+      # Supply your key via a local .env file (never commit it).
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # With no key set, the app auto-falls back to OFFLINE_MODE.
+      OFFLINE_MODE: ${OFFLINE_MODE:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      # Persist the FAISS index, uploads, and logs across container restarts.
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped

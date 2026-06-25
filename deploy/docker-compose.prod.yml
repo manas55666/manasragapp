@@ -1,0 +1,24 @@
+# Production compose for the RAG service (runs ON the EC2 host).
+#
+# Copy this file to /opt/manas-rag-app/docker-compose.yml on the server.
+# The CI/CD pipeline runs `docker compose pull && docker compose up -d` in
+# that directory, so it must reference the PUBLISHED GHCR image (not build).
+#
+# Replace OWNER/REPO with your GitHub path, e.g. ghcr.io/dev-roy/manas-rag-app.
+services:
+  rag:
+    image: ghcr.io/OWNER/REPO:latest
+    container_name: manas-rag
+    # Bind to localhost only — the public entrypoint is Nginx, not this port.
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      # Provided via /opt/manas-rag-app/.env on the host (chmod 600).
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OFFLINE_MODE: ${OFFLINE_MODE:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      # Persist the FAISS index, uploads, and logs across deploys/restarts.
+      - /opt/manas-rag-app/data:/app/data
+      - /opt/manas-rag-app/logs:/app/logs
+    restart: unless-stopped

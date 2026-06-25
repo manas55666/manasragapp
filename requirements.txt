@@ -1,0 +1,24 @@
+# ---- Web framework / server ----
+fastapi==0.115.6            # ASGI web framework exposing the REST API
+uvicorn[standard]==0.34.0  # ASGI server that runs the FastAPI app
+python-multipart==0.0.20   # required by FastAPI to parse multipart file uploads
+
+# ---- Configuration ----
+pydantic==2.10.4           # data validation for request/response models
+pydantic-settings==2.7.1   # typed settings loaded from environment / .env
+
+# ---- Google Gemini (embeddings + generation) ----
+google-generativeai==0.8.3 # official Google Generative AI SDK (Gemini)
+
+# ---- Vector store ----
+faiss-cpu==1.9.0.post1     # in-process similarity search index (CPU build)
+numpy==1.26.4              # vector math + array handling for FAISS
+
+# ---- Document parsing for uploads ----
+pypdf==5.1.0               # extract text from .pdf files
+python-docx==1.1.2         # extract text from .docx files
+
+# ---- Dev / test / quality ----
+pytest==8.3.4              # test runner
+httpx==0.28.1              # test client used by FastAPI's TestClient
+ruff==0.8.4                # linter / formatter for code-quality gate

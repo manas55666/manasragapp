@@ -1,0 +1,12 @@
+# Keep the build context lean and secrets out of the image.
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+data/
+logs/
+.env
+tests/
+.git/

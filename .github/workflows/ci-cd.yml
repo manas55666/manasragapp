@@ -1,0 +1,98 @@
+name: CI/CD
+
+# Run on pushes/PRs to main. Deployment only happens on push to main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  # ---- 1. Lint + test + coverage --------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest-cov
+
+      - name: Lint (ruff)
+        run: ruff check app tests
+
+      - name: Run tests with coverage (offline mode)
+        env:
+          OFFLINE_MODE: "true"
+        run: pytest --cov=app --cov-report=xml
+
+      # Coverage report is uploaded for the SonarCloud job below.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  # ---- 2. SonarCloud code-quality scan --------------------------------------
+  sonarcloud:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history gives Sonar accurate blame/new-code
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # ---- 3. Build + push image, then deploy to EC2 ----------------------------
+  deploy:
+    needs: sonarcloud
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # push image to GHCR
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # SSH to the EC2 host and roll the container to the new image.
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /opt/manas-rag-app
+            docker compose pull
+            docker compose up -d
